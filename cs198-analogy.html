@@ -648,6 +648,80 @@ Content-Length: 144
         history.replaceState(null, '', id ? `${base}#edit=${id}` : base);
       }
 
+      // Saving is performed by the local Clicky app, never browser storage.
+      const savedHTML = new Map(allBoxes().map(box => [box.dataset.clickyId, editableOf(box).innerHTML]));
+      const saveRequests = new Map();
+      const publishing = new Map();
+      function saveStatus(box, message) {
+        let status = box.querySelector('.clicky-save-status');
+        if (!status) {
+          status = document.createElement('p');
+          status.className = 'clicky-save-status';
+          status.setAttribute('role', 'status');
+          status.style.cssText = 'font:12px/1.5 system-ui;color:var(--muted);margin:8px 0 0';
+          box.appendChild(status);
+        }
+        status.textContent = message;
+      }
+      function requestSave(box) {
+        const id = box.dataset.clickyId;
+        const html = editableOf(box)?.innerHTML;
+        if (!savedHTML.has(id)) {
+          saveStatus(box, 'Not saved: new boxes need to be added to the source file through Clicky.');
+          return false;
+        }
+        if (saveRequests.has(id)) return true;
+        if (html === savedHTML.get(id)) return true;
+        const request = {token: crypto.randomUUID(), id, html, original: savedHTML.get(id)};
+        saveRequests.set(id, request);
+        saveStatus(box, 'Waiting for Clicky to save — keep this tab open.');
+        setTimeout(() => {
+          if (saveRequests.get(id) === request && !request.claimed) {
+            saveStatus(box, 'Not saved yet. Open Clicky and enable “Allow JavaScript from Apple Events” in your browser. Keep this tab open, then click Done to retry.');
+          }
+        }, 12000);
+        return true;
+      }
+      function finishSave(token, ok, message) {
+        const request = [...saveRequests.values()].find(item => item.token === token);
+        if (!request) return false;
+        const box = byId(request.id);
+        saveRequests.delete(request.id);
+        if (!box) return false;
+        if (!ok) { saveStatus(box, 'Not published: ' + message + ' Click Edit, then Done to retry.'); return true; }
+        savedHTML.set(request.id, request.html);
+        publishing.set(request.id, token);
+        saveStatus(box, 'Saved to GitHub — waiting for the live site to update. Keep this tab open.');
+        // A second edit made during a save is submitted against the newly saved version.
+        if (editableOf(box).innerHTML !== request.html) requestSave(box);
+        const verify = async (attempt = 0) => {
+          if (publishing.get(request.id) !== token) return;
+          try {
+            const response = await fetch(location.pathname + '?clicky-save=' + encodeURIComponent(token) + '-' + attempt, {cache: 'no-store'});
+            if (!response.ok) throw new Error('Site is not ready');
+            const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const liveBox = [...doc.querySelectorAll('.insight,.code-panel')].find(item => item.dataset.clickyId === request.id);
+            if (liveBox && editableOf(liveBox)?.innerHTML === request.html) {
+              publishing.delete(request.id);
+              if (!saveRequests.has(request.id) && editableOf(box).innerHTML === request.html) saveStatus(box, 'Saved and verified on the live site.');
+              return;
+            }
+          } catch {}
+          if (attempt < 36) setTimeout(() => verify(attempt + 1), 5000);
+          else saveStatus(box, 'Saved to GitHub, but the live update is not verified yet. Keep this tab open and check the Pages deployment before refreshing.');
+        };
+        verify();
+        return true;
+      }
+      window.addEventListener('beforeunload', event => {
+        const dirty = allBoxes().some(box => savedHTML.get(box.dataset.clickyId) !== editableOf(box)?.innerHTML);
+        if (dirty || saveRequests.size || publishing.size) { event.preventDefault(); event.returnValue = ''; }
+      });
+      document.addEventListener('input', event => {
+        const box = event.target.closest?.(BOX_SELECTOR);
+        if (box) saveStatus(box, 'Unsaved changes — click Done to save to GitHub through Clicky.');
+      });
+
       // ── edit mode ──
       function enterEdit(box, { scroll = false } = {}) {
         if (!box) return false;
@@ -660,7 +734,7 @@ Content-Length: 144
         if (!box.querySelector('.clicky-editing-label')) {
           const label = document.createElement('div');
           label.className = 'clicky-editing-label';
-          label.textContent = 'Editing — talk to Clicky, or type. Esc to finish.';
+          label.textContent = 'Editing — type or talk to Clicky. Done saves to GitHub through Clicky.';
           box.appendChild(label);
         }
         const bar = box.querySelector('.clicky-bar');
@@ -676,6 +750,7 @@ Content-Length: 144
         const box = editingBox;
         editingBox = null;
         if (!box) return true;
+        requestSave(box);
         const el = editableOf(box);
         if (el) { el.removeAttribute('contenteditable'); el.removeAttribute('spellcheck'); el.blur(); }
         box.classList.remove('editing');
@@ -783,7 +858,7 @@ Content-Length: 144
         };
         mk('add', '＋', 'Insert a new box after this one', () => openAddMenu(box, bar));
         mk('edit', '✏️', 'Edit this box (talk to Clicky, or type)', () => enterEdit(box));
-        mk('done', '✓ Done', 'Finish editing (Esc)', () => exitEdit()).hidden = true;
+        mk('done', '✓ Done', 'Save edits to GitHub through Clicky (Esc also saves)', () => exitEdit()).hidden = true;
         mk('copy', '⧉', 'Copy text', () => copyBox(box, bar));
         mk('del', '🗑', 'Delete this box', () => deleteBox(box));
         box.appendChild(bar);
@@ -846,7 +921,7 @@ Content-Length: 144
             const addition = isCode(anchor) ? bodyEl.innerText : bodyEl.innerHTML;
             if (isCode(anchor)) el.textContent = (el.textContent ? el.textContent + '\n' : '') + addition;
             else el.innerHTML = (el.innerHTML.trim() ? el.innerHTML + '<br><br>' : '') + addition;
-            flash(anchor); dismissReply();
+            flash(anchor); requestSave(anchor); dismissReply();
           });
           mkBtn('copy', '⧉', 'Copy answer', () => { const t = card.querySelector('.clicky-reply-body').innerText; if (navigator.clipboard?.writeText) navigator.clipboard.writeText(t).catch(() => {}); });
         }
@@ -867,6 +942,17 @@ Content-Length: 144
       // ── public API for Clicky (synchronous, never throws) ──
       const safe = (fn, fallback) => (...args) => { try { return fn(...args); } catch { return fallback; } };
       window.clickyEdit = {
+        pendingSave: safe(() => [...saveRequests.values()].find(item => !item.claimed) || null, null),
+        claimSave: safe(token => {
+          const request = [...saveRequests.values()].find(item => item.token === token);
+          if (!request || request.claimed) return false;
+          request.claimed = true;
+          saveStatus(byId(request.id), 'Saving to GitHub — keep this tab open.');
+          // If Clicky quits mid-save, allow it to pick up the request again.
+          setTimeout(() => { if (saveRequests.get(request.id) === request) request.claimed = false; }, 90000);
+          return true;
+        }, false),
+        finishSave: safe(finishSave, false),
         current: safe(() => (editingBox && editingBox.isConnected ? describe(editingBox, false) : null), null),
         get: safe((id) => { const box = byId(id); return box ? describe(box, false) : null; }, null),
         set: safe((id, html) => {

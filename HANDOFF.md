@@ -21,3 +21,11 @@ Read `README.md` first for the `window.clickyEdit` contract. These are the thing
 - `index.html` and `code-explainer.html` were carried over untouched; `code-explainer.html` still has its own (unrelated) Gemini chat. Out of scope unless asked.
 - Upstream PR `viraone/sdet-master-tracker#18` contains the same commits and is still open; the user decides whether to merge or close it. `upstream` remote points there.
 - Tailwind CDN is still loaded (`index.html`-era). Removing it would need a visual pass; preflight currently affects list styling in a few places.
+
+## Typed-edit persistence (September 2026)
+- Previously, pencil → type → Done changed only the DOM and was lost on refresh.
+- Done / Esc and answer-card Insert now enqueue explicit saves. The matching updated MyClicky app polls `pendingSave`, claims the request, checks its original HTML against disk, writes the box, and publishes only `cs198-analogy.html`.
+- The user explicitly authorized publishing these edits to this public GitHub Pages site.
+- The bridge accepts only `https://viraone.github.io/sdet-master-clicky/cs198-analogy.html`; Clicky must be running and browser JavaScript from Apple Events enabled. No browser storage was introduced.
+- Success has two stages: saved to GitHub, then verified against a fresh fetch of the deployed page. Failures retain dirty state and show retry guidance. Do not label DOM-only changes as saved.
+- MyClicky source lives in `/Users/viradeth/Desktop/MyClicky1`; its publish retry now pushes even when the previous attempt already committed.
