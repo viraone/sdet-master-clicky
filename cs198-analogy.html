@@ -672,7 +672,8 @@ Content-Length: 144
           const blocks = [...editable.querySelectorAll('div,p,ul,ol,li,pre,blockquote,h1,h2,h3,h4,h5,h6')];
           for (const block of blocks.reverse()) {
             const prefix = block.tagName === 'LI' ? [document.createTextNode('• ')] : [];
-            block.replaceWith(...prefix, ...block.childNodes, document.createElement('br'));
+            const lead = block.previousSibling && block.previousSibling.nodeName !== 'BR' ? [document.createElement('br')] : [];
+            block.replaceWith(...lead, ...prefix, ...block.childNodes, document.createElement('br'));
           }
         }
         const html = editable?.innerHTML;
