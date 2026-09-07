@@ -135,6 +135,26 @@
     .code-panel .clicky-editing-label { margin:0; padding:.45rem 1rem; border-top:1px solid var(--line); background:rgba(60,50,30,.03); }
     .clicky-flash { animation:clickyFlash .6s ease-out; }
     @keyframes clickyFlash { 0%{box-shadow:0 0 0 0 rgba(217,119,87,.0)} 20%{box-shadow:0 0 0 6px rgba(217,119,87,.45)} 100%{box-shadow:0 0 0 0 rgba(217,119,87,0)} }
+    /* ── Clicky in-page reply card ── */
+    .clicky-reply { position:relative; margin:1rem 0; padding:1rem 1.25rem 1.1rem; border:1px solid var(--line); border-left:4px solid var(--cyan); border-radius:0 12px 12px 0; background:linear-gradient(135deg, rgba(47,143,124,.07), var(--paper) 45%); box-shadow:0 6px 24px rgba(60,50,30,.08); animation:clickyReplyIn .25s ease-out; }
+    .clicky-reply.floating { position:fixed; right:1.25rem; bottom:5rem; z-index:80; width:min(520px, calc(100vw - 2.5rem)); max-height:60vh; overflow:auto; margin:0; border-radius:12px; border-left-width:4px; }
+    @keyframes clickyReplyIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+    .clicky-reply-head { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+    .clicky-reply-head .who { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .65rem; border-radius:99px; color:var(--cyan); background:rgba(47,143,124,.12); text-transform:uppercase; letter-spacing:.12em; font:800 .6rem/1.3 ui-monospace,monospace; }
+    .clicky-reply-head .who::before { content:'🎩'; font-size:.9em; }
+    .clicky-reply-head .spacer { flex:1; }
+    .clicky-reply-q { margin:0 0 .6rem; padding:.4rem .7rem; border-left:2px solid var(--line); color:var(--muted); font-size:.8rem; line-height:1.5; font-style:italic; }
+    .clicky-reply-body { color:#423d33; font-size:.92rem; line-height:1.65; overflow-wrap:anywhere; }
+    .clicky-reply-body p { margin:.5rem 0; color:inherit; } .clicky-reply-body p:first-child { margin-top:0; } .clicky-reply-body p:last-child { margin-bottom:0; }
+    .clicky-reply-body code { padding:.1rem .35rem; border-radius:5px; background:var(--code-bg); font-size:.85em; }
+    .clicky-reply-body pre { margin:.6rem 0; padding:.8rem 1rem; border-radius:10px; background:var(--code-bg); font-size:.78rem; }
+    .clicky-reply-body pre code { padding:0; background:none; }
+    .clicky-reply-body ul, .clicky-reply-body ol { margin:.4rem 0 .4rem 1.4rem; padding:0; }
+    .clicky-reply-body ul { list-style:disc; } .clicky-reply-body ol { list-style:decimal; }
+    .clicky-reply-head .clicky-btn.insert { width:auto; padding:0 .55rem; white-space:nowrap; color:var(--cyan); font-size:.72rem; }
+    .clicky-reply-body strong { font-weight:800; color:var(--ink); }
+    .clicky-reply.thinking .clicky-reply-body { color:var(--muted); animation:clickyPulse 1.2s infinite; }
+    @keyframes clickyPulse { 50%{opacity:.45} }
     .clicky-footer { margin:3rem 0 0; padding-top:1rem; border-top:1px solid var(--line); color:var(--muted); font:600 .72rem/1.5 ui-monospace,monospace; letter-spacing:.04em; text-align:center; }
     /* Full-course layout (chat panel removed; article uses the full width). */
     body { padding: 0 !important; }
@@ -775,6 +795,75 @@ Content-Length: 144
         if (e.key === 'Escape' && editingBox) { e.preventDefault(); exitEdit(); }
       });
 
+
+      // ── Clicky's spoken answers, rendered in the page ──
+      // Clicky calls clickyEdit.thinking(question) when it hears a question and
+      // clickyEdit.reply(answer, {question, id}) when it has one. The card sits
+      // right under the box being edited (or floats bottom-right when none).
+      let replyCard = null;
+
+      const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      function renderMarkdownLite(text) {
+        const blocks = [];
+        let src = String(text).replace(/\r\n?/g, '\n');
+        src = src.replace(/```[\w-]*\n([\s\S]*?)```/g, (_, code) => { blocks.push(`<pre><code>${escapeHtml(code.replace(/\n$/, ''))}</code></pre>`); return `\u0000${blocks.length - 1}\u0000`; });
+        const inline = (t) => escapeHtml(t)
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
+        const html = src.split(/\n{2,}/).map((para) => {
+          const lines = para.split('\n').filter((l) => l.trim());
+          if (!lines.length) return '';
+          if (lines.every((l) => /^\s*[-*•]\s+/.test(l))) return `<ul>${lines.map((l) => `<li>${inline(l.replace(/^\s*[-*•]\s+/, ''))}</li>`).join('')}</ul>`;
+          if (lines.every((l) => /^\s*\d+[.)]\s+/.test(l))) return `<ol>${lines.map((l) => `<li>${inline(l.replace(/^\s*\d+[.)]\s+/, ''))}</li>`).join('')}</ol>`;
+          if (/^\u0000\d+\u0000$/.test(para.trim())) return para.trim();
+          return `<p>${lines.map(inline).join('<br>')}</p>`;
+        }).join('');
+        return html.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[+i]);
+      }
+
+      function dismissReply() { replyCard?.remove(); replyCard = null; return true; }
+
+      function showReply({ body, question, id, thinking, isHtml }) {
+        dismissReply();
+        const anchor = byId(id) || editingBox;
+        const card = document.createElement('aside');
+        card.className = 'clicky-reply' + (thinking ? ' thinking' : '') + (anchor ? '' : ' floating');
+        card.setAttribute('aria-live', 'polite');
+        const head = document.createElement('div');
+        head.className = 'clicky-reply-head';
+        const who = document.createElement('span'); who.className = 'who'; who.textContent = thinking ? 'Clicky is thinking' : 'Clicky';
+        const spacer = document.createElement('span'); spacer.className = 'spacer';
+        head.append(who, spacer);
+        const mkBtn = (cls, text, title, fn) => {
+          const b = document.createElement('button'); b.type = 'button'; b.className = `clicky-btn ${cls}`; b.textContent = text; b.title = title;
+          b.addEventListener('click', fn); head.appendChild(b); return b;
+        };
+        if (!thinking && anchor) {
+          mkBtn('insert', '⤵ Insert', 'Append this answer to the box', () => {
+            const el = editableOf(anchor); if (!el) return;
+            const bodyEl = card.querySelector('.clicky-reply-body');
+            const addition = isCode(anchor) ? bodyEl.innerText : bodyEl.innerHTML;
+            if (isCode(anchor)) el.textContent = (el.textContent ? el.textContent + '\n' : '') + addition;
+            else el.innerHTML = (el.innerHTML.trim() ? el.innerHTML + '<br><br>' : '') + addition;
+            flash(anchor); dismissReply();
+          });
+          mkBtn('copy', '⧉', 'Copy answer', () => { const t = card.querySelector('.clicky-reply-body').innerText; if (navigator.clipboard?.writeText) navigator.clipboard.writeText(t).catch(() => {}); });
+        }
+        mkBtn('close', '✕', 'Dismiss', dismissReply);
+        card.appendChild(head);
+        if (question) { const q = document.createElement('p'); q.className = 'clicky-reply-q'; q.textContent = question; card.appendChild(q); }
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'clicky-reply-body';
+        if (thinking) bodyEl.textContent = 'Listening… working on it.';
+        else bodyEl.innerHTML = isHtml ? String(body) : renderMarkdownLite(body);
+        card.appendChild(bodyEl);
+        if (anchor) anchor.insertAdjacentElement('afterend', card); else document.body.appendChild(card);
+        replyCard = card;
+        if (anchor && isOffscreen(card)) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return true;
+      }
+
       // ── public API for Clicky (synchronous, never throws) ──
       const safe = (fn, fallback) => (...args) => { try { return fn(...args); } catch { return fallback; } };
       window.clickyEdit = {
@@ -791,6 +880,9 @@ Content-Length: 144
         }, false),
         done: safe(() => exitEdit(), true),
         list: safe(() => allBoxes().map((box) => describe(box, true)), []),
+        thinking: safe((question, opts) => showReply({ thinking: true, question: question || '', id: opts?.id }), false),
+        reply: safe((answer, opts) => showReply({ body: answer == null ? '' : answer, question: opts?.question || '', id: opts?.id, isHtml: !!opts?.html }), false),
+        dismiss: safe(() => dismissReply(), true),
       };
 
       // Deep link: #edit=<id> re-enters edit mode on load.
