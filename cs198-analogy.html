@@ -106,6 +106,36 @@
     @media(max-width:980px) { nav { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media(max-width:700px) { nav { grid-template-columns:1fr; } }
     @media(max-width:600px) { .hero { padding:1.5rem 1.2rem .75rem } h1 { font-size:2.65rem } pre { font-size:.68rem } .chapter+.chapter { padding-top:.75rem } }
+    /* ── Clicky read-and-edit toolbar ── */
+    .code-panel { position:relative; }
+    .clicky-bar { position:absolute; top:.45rem; right:.5rem; z-index:5; display:flex; align-items:center; gap:.2rem; padding:.15rem; border-radius:9px; background:rgba(255,255,255,.85); backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity .15s; }
+    .insight:hover > .clicky-bar, .code-panel:hover > .clicky-bar, .insight:focus-within > .clicky-bar, .code-panel:focus-within > .clicky-bar, .editing > .clicky-bar { opacity:1; pointer-events:auto; }
+    .clicky-btn { width:28px; height:28px; display:grid; place-items:center; padding:0; border:1px solid transparent; border-radius:7px; background:transparent; color:#b3ab9a; cursor:pointer; font:600 .85rem/1 var(--font-sans); transition:color .15s,background .15s,border-color .15s; }
+    .clicky-btn:hover { color:var(--ink); background:var(--paper); border-color:var(--line); }
+    .clicky-btn.add { font-size:1.1rem; } .clicky-btn.add:hover { color:var(--accent-dark); }
+    .clicky-btn.del:hover { color:#c1443f; }
+    .clicky-btn.done { width:auto; padding:0 .55rem; color:#fff; background:var(--accent); border-color:var(--accent); font-size:.72rem; letter-spacing:.04em; }
+    .clicky-btn.done:hover { background:var(--accent-dark); border-color:var(--accent-dark); color:#fff; }
+    .clicky-btn[hidden] { display:none; }
+    .clicky-menu { position:absolute; top:100%; right:0; margin-top:.25rem; display:flex; flex-direction:column; min-width:9rem; padding:.3rem; border:1px solid var(--line); border-radius:9px; background:var(--paper); box-shadow:0 8px 24px rgba(60,50,30,.12); }
+    .clicky-menu button { text-align:left; padding:.4rem .6rem; border:0; border-radius:6px; background:transparent; color:var(--ink); cursor:pointer; font:600 .72rem/1.3 ui-monospace,monospace; text-transform:uppercase; letter-spacing:.08em; }
+    .clicky-menu button:hover { background:var(--accent-light); color:var(--accent-dark); }
+    .clicky-menu button.mall { color:var(--gold); } .clicky-menu button.silicon { color:var(--blue); } .clicky-menu button.why { color:var(--purple); }
+    .clicky-toast { position:absolute; top:.6rem; right:9.5rem; z-index:6; padding:.2rem .55rem; border-radius:99px; background:var(--ink); color:#fff; font:700 .62rem/1.4 ui-monospace,monospace; letter-spacing:.08em; animation:clickyToast 1.1s ease-out forwards; pointer-events:none; }
+    @keyframes clickyToast { 0%{opacity:0;transform:translateY(3px)} 15%{opacity:1;transform:none} 75%{opacity:1} 100%{opacity:0} }
+    .clicky-undo { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:1rem 0; padding:.7rem 1.1rem; border:1px dashed var(--line); border-radius:12px; background:var(--code-bg); color:var(--muted); font:600 .78rem/1.4 var(--font-sans); }
+    .clicky-undo button { padding:.3rem .8rem; border:1px solid var(--accent); border-radius:99px; background:var(--paper); color:var(--accent-dark); cursor:pointer; font:800 .7rem/1 ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; }
+    .clicky-undo button:hover { background:var(--accent); color:#fff; }
+    .clicky-editing-label { display:block; margin:.6rem 0 0; color:var(--accent-dark); font:700 .62rem/1.4 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; }
+    .insight.editing { border-color:var(--accent); outline:2px solid var(--accent); outline-offset:2px; box-shadow:0 0 0 6px rgba(217,119,87,.12); }
+    .insight.editing > p { min-height:3rem; padding:.7rem .8rem; border:1px dashed var(--accent); border-radius:8px; background:#fffdf9; color:var(--ink); outline:none; }
+    .code-panel.editing { border-color:var(--accent); outline:2px solid var(--accent); outline-offset:2px; box-shadow:0 0 0 6px rgba(217,119,87,.12); }
+    .code-panel.editing pre { background:#f7f2e6; }
+    .code-panel.editing pre code { outline:none; display:block; min-height:1.5em; }
+    .code-panel .clicky-editing-label { margin:0; padding:.45rem 1rem; border-top:1px solid var(--line); background:rgba(60,50,30,.03); }
+    .clicky-flash { animation:clickyFlash .6s ease-out; }
+    @keyframes clickyFlash { 0%{box-shadow:0 0 0 0 rgba(217,119,87,.0)} 20%{box-shadow:0 0 0 6px rgba(217,119,87,.45)} 100%{box-shadow:0 0 0 0 rgba(217,119,87,0)} }
+    .clicky-footer { margin:3rem 0 0; padding-top:1rem; border-top:1px solid var(--line); color:var(--muted); font:600 .72rem/1.5 ui-monospace,monospace; letter-spacing:.04em; text-align:center; }
     /* Full-course layout (chat panel removed; article uses the full width). */
     body { padding: 0 !important; }
     #content {
@@ -527,6 +557,7 @@ Content-Length: 144
 </table></div>
 </section></article>
   </div>
+  <p class="clicky-footer">Edits are saved to disk by Clicky; say &ldquo;publish it&rdquo; to push.</p>
   <a class="top" href="#top" aria-label="Back to top">↑</a>
   </main>
 
@@ -542,6 +573,234 @@ Content-Length: 144
       if (h2) head.appendChild(h2);
       section.insertBefore(head, section.firstChild);
     });
+
+    /* ================= Clicky read-and-edit ================= */
+    // Every editable box carries a stable id in its dataset.clickyId (see scripts/add_clicky_ids.py).
+    // Clicky (the Mac voice assistant) drives this page via window.clickyEdit and mirrors
+    // the same edits into the HTML file on disk — nothing here persists on its own.
+    (() => {
+      const KIND_LABELS = { mall: 'Mall metaphor', silicon: 'Silicon reality', why: 'Why it matters' };
+      const BOX_SELECTOR = '#content .insight, #content .code-panel';
+      let editingBox = null;
+
+      const isCode = (box) => box.classList.contains('code-panel');
+      const kindOf = (box) => (isCode(box) ? 'code' : 'insight');
+      const editableOf = (box) => (isCode(box) ? box.querySelector('pre > code') : box.querySelector(':scope > p'));
+      const labelOf = (box) => {
+        const el = isCode(box) ? box.querySelector('figcaption') : box.querySelector(':scope > span');
+        return el ? el.textContent.trim() : '';
+      };
+      const allBoxes = () => Array.from(document.querySelectorAll(BOX_SELECTOR)).filter((box) => box.dataset.clickyId);
+      const byId = (id) => (typeof id === 'string' ? allBoxes().find((box) => box.dataset.clickyId === id) || null : null);
+
+      function nextId(prefix) {
+        let max = 0;
+        for (const box of allBoxes()) {
+          const m = /^(\w+)-(\d+)$/.exec(box.dataset.clickyId || '');
+          if (m && m[1] === prefix) max = Math.max(max, parseInt(m[2], 10));
+        }
+        return `${prefix}-${String(max + 1).padStart(3, '0')}`;
+      }
+
+      function describe(box, truncate) {
+        const el = editableOf(box);
+        const text = el ? el.innerText : '';
+        const out = { id: box.dataset.clickyId, kind: kindOf(box), label: labelOf(box) };
+        if (truncate) { out.text = text.length > 120 ? text.slice(0, 120) : text; }
+        else { out.html = el ? el.innerHTML : ''; out.text = text; }
+        return out;
+      }
+
+      function flash(box) {
+        box.classList.remove('clicky-flash');
+        void box.offsetWidth; // restart the animation
+        box.classList.add('clicky-flash');
+        setTimeout(() => box.classList.remove('clicky-flash'), 650);
+      }
+
+      function isOffscreen(box) {
+        const r = box.getBoundingClientRect();
+        return r.bottom < 0 || r.top > window.innerHeight;
+      }
+
+      function setHash(id) {
+        const base = location.pathname + location.search;
+        history.replaceState(null, '', id ? `${base}#edit=${id}` : base);
+      }
+
+      // ── edit mode ──
+      function enterEdit(box, { scroll = false } = {}) {
+        if (!box) return false;
+        if (editingBox && editingBox !== box) exitEdit();
+        const el = editableOf(box);
+        if (!el) return false;
+        box.classList.add('editing');
+        el.setAttribute('contenteditable', 'true');
+        el.setAttribute('spellcheck', 'false');
+        if (!box.querySelector('.clicky-editing-label')) {
+          const label = document.createElement('div');
+          label.className = 'clicky-editing-label';
+          label.textContent = 'Editing — talk to Clicky, or type. Esc to finish.';
+          box.appendChild(label);
+        }
+        const bar = box.querySelector('.clicky-bar');
+        if (bar) { bar.querySelector('.edit').hidden = true; bar.querySelector('.done').hidden = false; }
+        editingBox = box;
+        setHash(box.dataset.clickyId);
+        if (scroll) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus({ preventScroll: !scroll });
+        return true;
+      }
+
+      function exitEdit() {
+        const box = editingBox;
+        editingBox = null;
+        if (!box) return true;
+        const el = editableOf(box);
+        if (el) { el.removeAttribute('contenteditable'); el.removeAttribute('spellcheck'); el.blur(); }
+        box.classList.remove('editing');
+        box.querySelector('.clicky-editing-label')?.remove();
+        const bar = box.querySelector('.clicky-bar');
+        if (bar) { bar.querySelector('.edit').hidden = false; bar.querySelector('.done').hidden = true; }
+        setHash(null);
+        return true;
+      }
+
+      // ── box construction ──
+      function buildInsight(kind) {
+        const box = document.createElement('div');
+        box.className = `insight ${kind}`;
+        box.dataset.clickyId = nextId('ins');
+        const span = document.createElement('span');
+        span.textContent = KIND_LABELS[kind] || kind;
+        const p = document.createElement('p');
+        box.append(span, p);
+        return box;
+      }
+
+      function buildCodePanel(lang) {
+        const fig = document.createElement('figure');
+        fig.className = 'code-panel';
+        fig.dataset.clickyId = nextId('code');
+        const cap = document.createElement('figcaption');
+        cap.textContent = lang || 'Text';
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        pre.appendChild(code);
+        fig.append(cap, pre);
+        return fig;
+      }
+
+      function insertAfter(anchor, box) {
+        anchor.insertAdjacentElement('afterend', box);
+        mountToolbar(box);
+        enterEdit(box, { scroll: isOffscreen(box) });
+      }
+
+      // ── per-box actions ──
+      function copyBox(box, bar) {
+        const el = editableOf(box);
+        const text = el ? el.innerText : '';
+        const done = () => {
+          bar.querySelector('.clicky-toast')?.remove();
+          const t = document.createElement('span');
+          t.className = 'clicky-toast';
+          t.textContent = 'Copied';
+          box.appendChild(t);
+          setTimeout(() => t.remove(), 1100);
+        };
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, done);
+        else {
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch {}
+          ta.remove(); done();
+        }
+      }
+
+      function deleteBox(box) {
+        if (editingBox === box) exitEdit();
+        const stub = document.createElement('div');
+        stub.className = 'clicky-undo';
+        const msg = document.createElement('span');
+        msg.textContent = `Deleted ${box.dataset.clickyId} · ${labelOf(box) || kindOf(box)}`;
+        const undo = document.createElement('button');
+        undo.type = 'button'; undo.textContent = 'Undo';
+        stub.append(msg, undo);
+        box.replaceWith(stub);
+        const timer = setTimeout(() => stub.remove(), 2000);
+        undo.addEventListener('click', () => { clearTimeout(timer); stub.replaceWith(box); flash(box); });
+      }
+
+      function openAddMenu(box, bar) {
+        bar.querySelector('.clicky-menu')?.remove();
+        if (isCode(box)) { insertAfter(box, buildCodePanel(labelOf(box))); return; }
+        const menu = document.createElement('div');
+        menu.className = 'clicky-menu';
+        for (const kind of Object.keys(KIND_LABELS)) {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = kind; b.textContent = KIND_LABELS[kind];
+          b.addEventListener('click', (e) => { e.stopPropagation(); menu.remove(); insertAfter(box, buildInsight(kind)); });
+          menu.appendChild(b);
+        }
+        bar.appendChild(menu);
+        const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('mousedown', close, true); } };
+        setTimeout(() => document.addEventListener('mousedown', close, true), 0);
+      }
+
+      function mountToolbar(box) {
+        if (box.querySelector(':scope > .clicky-bar')) return;
+        const bar = document.createElement('div');
+        bar.className = 'clicky-bar';
+        const mk = (cls, text, title, onClick) => {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = `clicky-btn ${cls}`; b.textContent = text; b.title = title;
+          b.setAttribute('aria-label', title);
+          b.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus in the editable
+          b.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+          bar.appendChild(b);
+          return b;
+        };
+        mk('add', '＋', 'Insert a new box after this one', () => openAddMenu(box, bar));
+        mk('edit', '✏️', 'Edit this box (talk to Clicky, or type)', () => enterEdit(box));
+        mk('done', '✓ Done', 'Finish editing (Esc)', () => exitEdit()).hidden = true;
+        mk('copy', '⧉', 'Copy text', () => copyBox(box, bar));
+        mk('del', '🗑', 'Delete this box', () => deleteBox(box));
+        box.appendChild(bar);
+      }
+
+      allBoxes().forEach(mountToolbar);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && editingBox) { e.preventDefault(); exitEdit(); }
+      });
+
+      // ── public API for Clicky (synchronous, never throws) ──
+      const safe = (fn, fallback) => (...args) => { try { return fn(...args); } catch { return fallback; } };
+      window.clickyEdit = {
+        current: safe(() => (editingBox && editingBox.isConnected ? describe(editingBox, false) : null), null),
+        get: safe((id) => { const box = byId(id); return box ? describe(box, false) : null; }, null),
+        set: safe((id, html) => {
+          const box = byId(id);
+          const el = box && editableOf(box);
+          if (!el) return false;
+          el.innerHTML = html == null ? '' : String(html);
+          if (isOffscreen(box)) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          flash(box);
+          return true;
+        }, false),
+        done: safe(() => exitEdit(), true),
+        list: safe(() => allBoxes().map((box) => describe(box, true)), []),
+      };
+
+      // Deep link: #edit=<id> re-enters edit mode on load.
+      const m = /^#edit=([\w-]+)$/.exec(location.hash);
+      if (m) {
+        const box = byId(m[1]);
+        if (box) enterEdit(box, { scroll: true });
+        else setHash(null);
+      }
+    })();
   </script>
 </body>
 </html>
