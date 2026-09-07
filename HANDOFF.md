@@ -29,3 +29,11 @@ Read `README.md` first for the `window.clickyEdit` contract. These are the thing
 - The bridge accepts only `https://viraone.github.io/sdet-master-clicky/cs198-analogy.html`; Clicky must be running and browser JavaScript from Apple Events enabled. No browser storage was introduced.
 - Success has two stages: saved to GitHub, then verified against a fresh fetch of the deployed page. Failures retain dirty state and show retry guidance. Do not label DOM-only changes as saved.
 - MyClicky source lives in `/Users/viradeth/Desktop/MyClicky1`; its publish retry now pushes even when the previous attempt already committed.
+
+## Break checkpoint — 2026-09-06
+- Site changes are live; Pages build `a9a73ab` was verified HTTP 200 and byte-for-byte against the local lecture.
+- MyClicky changes: continuous Ask questions across pauses; retain speech while busy; Ask is the default opening tab; phone TALK respects Ask selection; Done/Esc/Insert save bridge installed and running.
+- MyClicky code is committed as `8707d8a` on local main. Pushing main was rejected because GitHub has newer commits; session work is backed up on `codex/ask-stream-and-site-save-20260906`. Integrate with remote main before the next app release; do not force-push.
+- Checks passed: release build/signature, JS save-state regression checks, all 110 stable IDs, native disk writes and publish retry against a temporary bare Git repository, exclusion of unrelated staged files.
+- In-app browser automation failed to connect, so no end-to-end manual browser edit was claimed. The user should refresh once to load the new controls, keep Clicky running, and wait for “Saved and verified on the live site.”
+- Existing untracked `MyClicky_vs_CuaDriver_Strategy.md.pdf` in MyClicky1 was left untouched and not uploaded.
