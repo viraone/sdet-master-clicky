@@ -665,7 +665,17 @@ Content-Length: 144
       }
       function requestSave(box) {
         const id = box.dataset.clickyId;
-        const html = editableOf(box)?.innerHTML;
+        const editable = editableOf(box);
+        // contenteditable and answer cards can introduce block tags inside a <p>.
+        // Flatten those into line breaks before writing valid source HTML.
+        if (editable && !isCode(box)) {
+          const blocks = [...editable.querySelectorAll('div,p,ul,ol,li,pre,blockquote,h1,h2,h3,h4,h5,h6')];
+          for (const block of blocks.reverse()) {
+            const prefix = block.tagName === 'LI' ? [document.createTextNode('• ')] : [];
+            block.replaceWith(...prefix, ...block.childNodes, document.createElement('br'));
+          }
+        }
+        const html = editable?.innerHTML;
         if (!savedHTML.has(id)) {
           saveStatus(box, 'Not saved: new boxes need to be added to the source file through Clicky.');
           return false;
